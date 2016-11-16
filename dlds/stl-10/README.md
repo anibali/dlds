@@ -26,13 +26,14 @@ mnist
 `stl-10.h5` contains the images and labels for the training and test sets. Its
 internal structure is as follows:
 
-| Name                        | Type      | Dimensions            |
-| --------------------------- | --------- | --------------------- |
-| `/test/images`              | Byte      | 8000 x 3 x 96 x 96    |
-| `/test/labels`              | Byte      | 8000 x 1              |
-| `/train/labeled/images`     | Byte      | 5000 x 3 x 96 x 96    |
-| `/train/labeled/labels`     | Byte      | 5000 x 1              |
-| `/train/unlabeled/images`   | Byte      | 100000 x 3 x 96 x 96  |
+| Name                          | Type      | Dimensions            |
+| ----------------------------- | --------- | --------------------- |
+| `/test/images`                | Byte      | 8000 x 3 x 96 x 96    |
+| `/test/labels`                | Byte      | 8000 x 1              |
+| `/train/labeled/images`       | Byte      | 5000 x 3 x 96 x 96    |
+| `/train/labeled/labels`       | Byte      | 5000 x 1              |
+| `/train/labeled/fold_indices` | Byte      | 10 x 1000             |
+| `/train/unlabeled/images`     | Byte      | 100000 x 3 x 96 x 96  |
 
 `classes.txt` contains names with human semantics for each class label.
 Line 1 contains the name for class label 1, line 2 for class label 2, and so

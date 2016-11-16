@@ -16,7 +16,7 @@ Copy `config.example.json` to `config.json` and customise to your liking.
 
 TODO: Dockerize
 
-Example: Get the MNIST data set.
+Example: Install the MNIST data set.
 
 ```
 th dlds/main.lua mnist
@@ -25,7 +25,9 @@ th dlds/main.lua mnist
 ## Supported datasets
 
 * [x] [MNIST](dlds/mnist)
-* [ ] [STL-10](dlds/stl-10)
+* [x] [STL-10](dlds/stl-10)
+* [ ] CIFAR-10
+* [ ] Places205
 
 ## Conventions
 

@@ -55,10 +55,9 @@ dlds.register_dataset('stl-10', function(details)
   print('Processing labeled training examples...')
   local train_mat = matio.load(train_mat_file)
 
-  -- TODO: Group validation folds and remove fold_indices
   local fold_ds_opts = hdf5.DataSetOptions()
   fold_ds_opts:setChunked(1024, 1)
-  local fold_indices = torch.IntTensor(10, 1000)
+  local fold_indices = torch.LongTensor(10, 1000)
   for i = 1, 10 do
     fold_indices[i]:copy(train_mat.fold_indices[i]:squeeze())
   end
