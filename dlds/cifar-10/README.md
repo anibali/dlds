@@ -10,7 +10,7 @@ https://www.cs.toronto.edu/~kriz/cifar.html
 DLDS will install the following files for this dataset:
 
 ```
-mnist
+cifar-10
 ├── classes.txt
 └── cifar-10.h5
 ```

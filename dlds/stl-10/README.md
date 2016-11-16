@@ -18,7 +18,7 @@ http://cs.stanford.edu/~acoates/stl10
 DLDS will install the following files for this dataset:
 
 ```
-mnist
+stl-10
 ├── classes.txt
 └── stl-10.h5
 ```

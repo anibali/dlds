@@ -30,6 +30,7 @@ command shown here works with the example config file.
 * [x] [MNIST](dlds/mnist)
 * [x] [STL-10](dlds/stl-10)
 * [x] [CIFAR-10](dlds/cifar-10)
+* [x] [CIFAR-100](dlds/cifar-100)
 * [ ] Places205
 
 ## Conventions
