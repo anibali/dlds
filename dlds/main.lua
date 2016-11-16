@@ -4,7 +4,12 @@
 local dlds = require('dlds')
 local pl = require('pl.import_into')()
 
-local dataset_id = arg[1]
+if #arg ~= 2 or arg[1] ~= 'install' then
+  print('Usage: dlds install <dataset_id>')
+  os.exit(1)
+end
+
+local dataset_id = arg[2]
 
 local dataset_script = pl.path.join(dlds.script_dir(), dataset_id, dataset_id .. '.lua')
 assert(pl.path.isfile(dataset_script),

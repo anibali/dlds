@@ -8,19 +8,22 @@ automatic and painless process.
   languages including Lua, Python, and Matlab.
 * Class labels all use 1-based indexing
 
-## Configuration
+## Building
 
-Copy `config.example.json` to `config.json` and customise to your liking.
+1. Copy `config.example.json` to `config.json` and customise to your liking
+3. [Install Docker](https://www.docker.com/products/overview#/install_the_platform)
+2. Build the DLDS Docker image with `docker build -t dlds $PWD`
 
 ## Usage
 
-TODO: Dockerize
-
-Example: Install the MNIST data set.
+Example: Installing the MNIST data set.
 
 ```
-th dlds/main.lua mnist
+docker run --rm -it --volume=/data:/data dlds install mnist
 ```
+
+Ensure that you set the volume(s) to match your particular `config.json`. The
+command shown here works with the example config file.
 
 ## Supported datasets
 
