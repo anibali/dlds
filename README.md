@@ -1,7 +1,7 @@
 # Deep learning datasets (DLDS)
 
-The purpose of DLDS is to make fetching and preprocessing datasets an
-automatic and painless process.
+The purpose of DLDS is to make fetching and preparing datasets an automatic and
+painless process.
 
 * Necessary resources are automatically downloaded and checked for integrity.
 * Datasets are processed into HDF5 files, which can be read using a variety of
@@ -29,7 +29,7 @@ command shown here works with the example config file.
 
 * [x] [MNIST](dlds/mnist)
 * [x] [STL-10](dlds/stl-10)
-* [ ] CIFAR-10
+* [x] [CIFAR-10](dlds/cifar-10)
 * [ ] Places205
 
 ## Conventions
