@@ -1,0 +1,8 @@
+{
+  "temporary_directory": "/tmp",
+  "datasets_directory": "/data",
+  "cache": {
+    "cache_directory": "/data/cache",
+    "keep_downloads": true
+  }
+}
