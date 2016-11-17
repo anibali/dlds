@@ -33,11 +33,11 @@ dlds.register_dataset('cifar-10', function(details)
     local batch_labels = data_batch_mat.labels:add(1)
 
     if i == 1 then
-      out_h5:write('train/images', batch_images, image_ds_opts)
-      out_h5:write('train/labels', batch_labels, label_ds_opts)
+      out_h5:write('/train/images', batch_images, image_ds_opts)
+      out_h5:write('/train/labels', batch_labels, label_ds_opts)
     else
-      out_h5:append('train/images', batch_images, image_ds_opts)
-      out_h5:append('train/labels', batch_labels, label_ds_opts)
+      out_h5:append('/train/images', batch_images, image_ds_opts)
+      out_h5:append('/train/labels', batch_labels, label_ds_opts)
     end
   end
 
@@ -47,8 +47,8 @@ dlds.register_dataset('cifar-10', function(details)
   local batch_images = test_batch_mat.data:reshape(test_batch_mat.data:size(1), 3, 32, 32)
   local batch_labels = test_batch_mat.labels:add(1)
 
-  out_h5:write('test/images', batch_images, image_ds_opts)
-  out_h5:write('test/labels', batch_labels, label_ds_opts)
+  out_h5:write('/test/images', batch_images, image_ds_opts)
+  out_h5:write('/test/labels', batch_labels, label_ds_opts)
 
   local batches_meta_mat = load_mat_file('batches.meta')
 

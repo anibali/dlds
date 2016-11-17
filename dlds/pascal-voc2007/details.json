@@ -1,0 +1,18 @@
+{
+  "name": "PASCAL VOC2007",
+  "description": "The goal of this challenge is to recognize objects from a number of visual object classes in realistic scenes (i.e. not pre-segmented objects). It is fundamentally a supervised learning learning problem in that a training set of labelled images is provided.",
+  "url": "http://host.robots.ox.ac.uk:8080/pascal/VOC/voc2007/",
+  "resources": {
+    "VOCtrainval_06-Nov-2007.tar": {
+      "url": "http://host.robots.ox.ac.uk:8080/pascal/VOC/voc2007/VOCtrainval_06-Nov-2007.tar",
+      "md5sum": "c52e279531787c972589f7e41ab4ae64"
+    },
+    "VOCtest_06-Nov-2007.tar": {
+      "url": "http://host.robots.ox.ac.uk:8080/pascal/VOC/voc2007/VOCtest_06-Nov-2007.tar",
+      "md5sum": "b6e924de25625d8de591ea690078ad9f"
+    }
+  },
+  "citations": [
+    "M. Everingham, L. Van Gool, C. K. I. Williams, J. Winn, A. Zisserman; The PASCAL Visual Object Classes Challenge 2007 (VOC2007) Results"
+  ]
+}

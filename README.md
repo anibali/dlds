@@ -31,7 +31,7 @@ command shown here works with the example config file.
 * [x] [STL-10](dlds/stl-10)
 * [x] [CIFAR-10](dlds/cifar-10)
 * [x] [CIFAR-100](dlds/cifar-100)
-* [ ] Places205
+* [x] [PASCAL VOC2007](dlds/pascal-voc2007)
 
 ## Conventions
 

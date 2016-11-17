@@ -31,8 +31,8 @@ dlds.register_dataset('cifar-100', function(details)
     local images = train_mat.data:reshape(train_mat.data:size(1), 3, 32, 32)
     local labels = train_mat.fine_labels:add(1)
 
-    out_h5:write('train/images', images, image_ds_opts)
-    out_h5:write('train/labels', labels, label_ds_opts)
+    out_h5:write('/train/images', images, image_ds_opts)
+    out_h5:write('/train/labels', labels, label_ds_opts)
   end
   collectgarbage()
 
@@ -45,8 +45,8 @@ dlds.register_dataset('cifar-100', function(details)
     local images = test_mat.data:reshape(test_mat.data:size(1), 3, 32, 32)
     local labels = test_mat.fine_labels:add(1)
 
-    out_h5:write('test/images', images, image_ds_opts)
-    out_h5:write('test/labels', labels, label_ds_opts)
+    out_h5:write('/test/images', images, image_ds_opts)
+    out_h5:write('/test/labels', labels, label_ds_opts)
 
     for i = 1, labels:size(1) do
       superclass_associations[labels[{i, 1}]] = test_mat.coarse_labels[{i, 1}] + 1
@@ -54,7 +54,7 @@ dlds.register_dataset('cifar-100', function(details)
   end
   collectgarbage()
 
-  out_h5:write('meta/superclasses', superclass_associations, label_ds_opts)
+  out_h5:write('/meta/superclasses', superclass_associations, label_ds_opts)
 
   local meta_mat = load_mat_file('meta')
 

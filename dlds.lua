@@ -66,10 +66,25 @@ function Details:make_dataset_directory()
 end
 
 function dlds.extract_archive(file, dest_dir)
+  local format
+  if file:find('%.tar%.gz$') or file:find('%.tgz$') then
+    format = 'tgz'
+  elseif file:find('%.tar$') then
+    format = 'tar'
+  end
+
   print('Extracting "' .. file .. '"...')
-  pl.utils.execute(string.format('tar xzf %s -C %s',
-    pl.utils.quote_arg(file), pl.utils.quote_arg(dest_dir)
-  ))
+  if format == 'tgz' then
+    pl.utils.execute(string.format('tar xzf %s -C %s',
+      pl.utils.quote_arg(file), pl.utils.quote_arg(dest_dir)
+    ))
+  elseif format == 'tar' then
+    pl.utils.execute(string.format('tar xf %s -C %s',
+      pl.utils.quote_arg(file), pl.utils.quote_arg(dest_dir)
+    ))
+  else
+    error('unrecognised archive format')
+  end
 end
 
 function dlds.gunzip(file, dest_file)

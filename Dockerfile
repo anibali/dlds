@@ -48,6 +48,12 @@ RUN luarocks install lua-cjson
 # Install module for loading Matlab data files
 RUN luarocks install matio
 
+# Install XML parser
+RUN apt-get update \
+ && apt-get install -y libexpat1-dev \
+ && rm -rf /var/lib/apt/lists/*
+RUN luarocks install luaxpath
+
 # Set working dir
 RUN mkdir /app
 WORKDIR /app
