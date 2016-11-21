@@ -13,7 +13,6 @@ local function write_image_dataset(h5_file, path, n_examples, get_batch)
     local cur_batch_size = math.min(batch_size, 1 + n_examples - i)
     local sample = get_batch({i, i + cur_batch_size - 1})
     sample = sample
-      :transpose(1, 2) -- pixels x batch => batch x pixels
       :reshape(cur_batch_size, 3, 96, 96) -- batch x pixels => BFWH
       :transpose(3, 4) -- BFWH => BFHW
     if i == 1 then
@@ -48,7 +47,7 @@ dlds.register_dataset('stl-10', function(details)
   local data = unlabeled_h5:read('/X')
   local size = data:dataspaceSize()
   write_image_dataset(out_h5, '/train/unlabeled/images', size[2], function(slice)
-    return data:partial({1, size[1]}, slice):byte()
+    return data:partial({1, size[1]}, slice):transpose(1, 2):byte()
   end)
   unlabeled_h5:close()
 
