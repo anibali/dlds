@@ -71,6 +71,8 @@ function dlds.extract_archive(file, dest_dir)
     format = 'tgz'
   elseif file:find('%.tar$') then
     format = 'tar'
+  elseif file:find('%.zip$') then
+    format = 'zip'
   end
 
   print('Extracting "' .. file .. '"...')
@@ -80,6 +82,10 @@ function dlds.extract_archive(file, dest_dir)
     ))
   elseif format == 'tar' then
     pl.utils.execute(string.format('tar xf %s -C %s',
+      pl.utils.quote_arg(file), pl.utils.quote_arg(dest_dir)
+    ))
+  elseif format == 'zip' then
+    pl.utils.execute(string.format('unzip -q %s -d %s',
       pl.utils.quote_arg(file), pl.utils.quote_arg(dest_dir)
     ))
   else
