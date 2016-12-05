@@ -15,6 +15,7 @@ local function write_image_dataset(h5_file, path, n_examples, get_batch)
     sample = sample
       :reshape(cur_batch_size, 3, 96, 96) -- batch x pixels => BFWH
       :transpose(3, 4) -- BFWH => BFHW
+      :contiguous()
     if i == 1 then
       h5_file:write(path, sample, image_ds_opts)
     else
@@ -47,9 +48,10 @@ dlds.register_dataset('stl-10', function(details)
   local data = unlabeled_h5:read('/X')
   local size = data:dataspaceSize()
   write_image_dataset(out_h5, '/train/unlabeled/images', size[2], function(slice)
-    return data:partial({1, size[1]}, slice):transpose(1, 2):byte()
+    return data:partial({1, size[1]}, slice):transpose(1, 2):byte():contiguous()
   end)
   unlabeled_h5:close()
+  print('\n')
 
   print('Processing labeled training examples...')
   local train_mat = matio.load(train_mat_file)
@@ -66,6 +68,7 @@ dlds.register_dataset('stl-10', function(details)
     return train_mat.X:narrow(1, slice[1], 1 + slice[2] - slice[1]):byte()
   end)
   out_h5:write('/train/labeled/labels', train_mat.y:byte(), label_ds_opts)
+  print('\n')
 
   print('Processing test examples...')
   local test_mat = matio.load(test_mat_file)
@@ -74,6 +77,7 @@ dlds.register_dataset('stl-10', function(details)
     return test_mat.X:narrow(1, slice[1], 1 + slice[2] - slice[1]):byte()
   end)
   out_h5:write('/test/labels', test_mat.y:byte(), label_ds_opts)
+  print('\n')
 
   pl.file.write(pl.path.join(out_dir, 'classes.txt'),
     table.concat(test_mat.class_names, '\n') .. '\n')
