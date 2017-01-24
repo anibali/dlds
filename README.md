@@ -33,6 +33,7 @@ command shown here works with the example config file.
 * [x] [CIFAR-100](dlds/cifar-100)
 * [x] [PASCAL VOC2007](dlds/pascal-voc2007)
 * [x] [CelebA](dlds/celeba)
+* [x] [SVHN](dlds/svhn)
 
 ## Conventions
 

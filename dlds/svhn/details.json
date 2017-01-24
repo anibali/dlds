@@ -1,0 +1,22 @@
+{
+  "name": "SVHN",
+  "description": "SVHN is a real-world image dataset for developing machine learning and object recognition algorithms with minimal requirement on data preprocessing and formatting. It can be seen as similar in flavor to MNIST (e.g., the images are of small cropped digits), but incorporates an order of magnitude more labeled data (over 600,000 digit images) and comes from a significantly harder, unsolved, real world problem (recognizing digits and numbers in natural scene images). SVHN is obtained from house numbers in Google Street View images.",
+  "url": "http://ufldl.stanford.edu/housenumbers/",
+  "resources": {
+    "train_32x32.mat": {
+      "url": "http://ufldl.stanford.edu/housenumbers/train_32x32.mat",
+      "md5sum": "e26dedcc434d2e4c54c9b2d4a06d8373"
+    },
+    "test_32x32.mat": {
+      "url": "http://ufldl.stanford.edu/housenumbers/test_32x32.mat",
+      "md5sum": "eb5a983be6a315427106f1b164d9cef3"
+    },
+    "extra_32x32.mat": {
+      "url": "http://ufldl.stanford.edu/housenumbers/extra_32x32.mat",
+      "md5sum": "a93ce644f1a588dc4d68dda5feec44a7"
+    }
+  },
+  "citations": [
+    "Yuval Netzer, Tao Wang, Adam Coates, Alessandro Bissacco, Bo Wu, Andrew Y. Ng; Reading Digits in Natural Images with Unsupervised Feature Learning; 2011"
+  ]
+}
