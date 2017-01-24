@@ -3,21 +3,33 @@ local pl = require('pl.import_into')()
 local matio = require('matio')
 local hdf5 = require('hdf5')
 
-local function write_image_dataset(h5_file, path, n_examples, get_batch)
+local function write_image_dataset(h5_file, path, data_mat, gen)
   local image_ds_opts = hdf5.DataSetOptions()
   image_ds_opts:setChunked(256, 3, 32, 32)
+  local label_ds_opts = hdf5.DataSetOptions()
+  label_ds_opts:setChunked(4096, 1)
 
+  local n_examples = data_mat.X:size(4)
+  local indices = torch.randperm(gen, n_examples):long()
   local batch_size = 256
+
   for i = 1, n_examples, batch_size do
     local cur_batch_size = math.min(batch_size, 1 + n_examples - i)
-    local sample = get_batch({i, i + cur_batch_size - 1})
+    local sample = data_mat.X
+      :index(4, indices:narrow(1, i, cur_batch_size))
+      :permute(4, 3, 1, 2) -- HWFB => BFHW
+      :contiguous()
     if i == 1 then
-      h5_file:write(path, sample, image_ds_opts)
+      h5_file:write(path .. '/images', sample, image_ds_opts)
     else
-      h5_file:append(path, sample, image_ds_opts)
+      h5_file:append(path .. '/images', sample, image_ds_opts)
     end
     xlua.progress(i, n_examples)
   end
+
+  local test_labels = data_mat.y:byte()
+  test_labels:add(test_labels:eq(0):mul(10))
+  h5_file:write(path .. '/labels', test_labels, label_ds_opts)
 end
 
 dlds.register_dataset('svhn', function(details)
@@ -33,21 +45,13 @@ dlds.register_dataset('svhn', function(details)
   local label_ds_opts = hdf5.DataSetOptions()
   label_ds_opts:setChunked(4096, 1)
 
+  local gen = torch.Generator()
+  torch.manualSeed(gen, 12345)
+
   print('Processing main training examples...')
   do
     local train_mat = matio.load(train_mat_file)
-
-    local size = train_mat.X:size()
-    write_image_dataset(out_h5, '/train/main/images', size[4], function(slice)
-      return train_mat.X
-        :narrow(4, slice[1], (slice[2] - slice[1]) + 1)
-        :permute(4, 3, 1, 2) -- HWFB => BFHW
-        :contiguous()
-    end)
-
-    local train_labels = train_mat.y:byte()
-    train_labels:add(train_labels:eq(0):mul(10))
-    out_h5:write('/train/main/labels', train_labels, label_ds_opts)
+    write_image_dataset(out_h5, '/train/main', train_mat, gen)
     print('\n')
   end
   collectgarbage()
@@ -55,18 +59,7 @@ dlds.register_dataset('svhn', function(details)
   print('Processing test examples...')
   do
     local test_mat = matio.load(test_mat_file)
-
-    local size = test_mat.X:size()
-    write_image_dataset(out_h5, '/test/images', size[4], function(slice)
-      return test_mat.X
-        :narrow(4, slice[1], (slice[2] - slice[1]) + 1)
-        :permute(4, 3, 1, 2) -- HWFB => BFHW
-        :contiguous()
-    end)
-
-    local test_labels = test_mat.y:byte()
-    test_labels:add(test_labels:eq(0):mul(10))
-    out_h5:write('/test/labels', test_labels, label_ds_opts)
+    write_image_dataset(out_h5, '/test', test_mat, gen)
     print('\n')
   end
   collectgarbage()
@@ -74,18 +67,7 @@ dlds.register_dataset('svhn', function(details)
   print('Processing extra training examples...')
   do
     local extra_mat = matio.load(extra_mat_file)
-
-    local size = extra_mat.X:size()
-    write_image_dataset(out_h5, '/train/extra/images', size[4], function(slice)
-      return extra_mat.X
-        :narrow(4, slice[1], (slice[2] - slice[1]) + 1)
-        :permute(4, 3, 1, 2) -- HWFB => BFHW
-        :contiguous()
-    end)
-
-    local extra_labels = extra_mat.y:byte()
-    extra_labels:add(extra_labels:eq(0):mul(10))
-    out_h5:write('/train/extra/labels', extra_labels, label_ds_opts)
+    write_image_dataset(out_h5, '/train/extra', extra_mat, gen)
     print('\n')
   end
   collectgarbage()
