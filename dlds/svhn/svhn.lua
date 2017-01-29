@@ -27,9 +27,9 @@ local function write_image_dataset(h5_file, path, data_mat, gen)
     xlua.progress(i, n_examples)
   end
 
-  local test_labels = data_mat.y:byte()
-  test_labels:add(test_labels:eq(0):mul(10))
-  h5_file:write(path .. '/labels', test_labels, label_ds_opts)
+  local labels = data_mat.y:byte():index(1, indices)
+  labels:add(labels:eq(0):mul(10))
+  h5_file:write(path .. '/labels', labels, label_ds_opts)
 end
 
 dlds.register_dataset('svhn', function(details)
