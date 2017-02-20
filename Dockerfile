@@ -54,6 +54,12 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 RUN luarocks install luaxpath
 
+# Install GraphicsMagick and Lua bindings
+RUN apt-get update \
+  && apt-get install -y graphicsmagick libgraphicsmagick1-dev \
+  && rm -rf /var/lib/apt/lists/*
+RUN luarocks install graphicsmagick
+
 # Set working dir
 RUN mkdir /app
 WORKDIR /app

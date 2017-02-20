@@ -30,6 +30,19 @@ local function check_md5sum(file, md5sum)
   return md5sum == actual_md5sum, actual_md5sum
 end
 
+function Details:download_tmp_file(url, filename)
+  local out_dir = pl.path.join(self.tmpdir, 'downloads')
+
+  pl.dir.makepath(out_dir)
+  local out_file = pl.path.join(out_dir, filename)
+
+  pl.utils.execute(string.format('curl -Lso %s %s',
+    pl.utils.quote_arg(out_file), pl.utils.quote_arg(url)
+  ))
+
+  return out_file
+end
+
 function Details:download_file(filename)
   local out_dir
 
