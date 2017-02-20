@@ -1,0 +1,12 @@
+{
+  "name": "Twitch emotes",
+  "description": "Twitch subscriber emotes.",
+  "url": "https://twitchemotes.com/sub/1",
+  "resources": {
+    "subscriber_20170216.json": {
+      "url": "https://gist.githubusercontent.com/anibali/ec9b345daeeea10d3e1b74f0bcb4548a/raw/65c7c0cc67917aa518b37f47bb4f8d8dd7f3c40f/subscriber_20170216.json",
+      "md5sum": "d0950dad93627a6f87b7cabb3a59f2cd"
+    }
+  },
+  "citations": []
+}
