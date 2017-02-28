@@ -60,21 +60,28 @@ dlds.register_dataset('mnist', function(details)
   local image_ds_opts = hdf5.DataSetOptions()
   image_ds_opts:setChunked(512, 1, 28, 28)
 
+  local gen = torch.Generator()
+  torch.manualSeed(gen, 12345)
+
   do
     local train_images = read_images(train_images_gz, tmpdir)
-    out_h5:write('/train/images', train_images, image_ds_opts)
-
     local train_labels = read_labels(train_labels_gz, tmpdir)
-    out_h5:write('/train/labels', train_labels, label_ds_opts)
+
+    local indices = torch.randperm(gen, train_images:size(1)):long()
+
+    out_h5:write('/train/images', train_images:index(1, indices):contiguous(), image_ds_opts)
+    out_h5:write('/train/labels', train_labels:index(1, indices):contiguous(), label_ds_opts)
   end
   collectgarbage()
 
   do
     local test_images = read_images(test_images_gz, tmpdir)
-    out_h5:write('/test/images', test_images, image_ds_opts)
-
     local test_labels = read_labels(test_labels_gz, tmpdir)
-    out_h5:write('/test/labels', test_labels, label_ds_opts)
+
+    local indices = torch.randperm(gen, test_images:size(1)):long()
+
+    out_h5:write('/test/images', test_images:index(1, indices):contiguous(), image_ds_opts)
+    out_h5:write('/test/labels', test_labels:index(1, indices):contiguous(), label_ds_opts)
   end
   collectgarbage()
 
