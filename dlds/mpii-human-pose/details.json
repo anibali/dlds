@@ -1,0 +1,18 @@
+{
+  "name": "MPII Human Pose",
+  "description": "MPII Human Pose dataset is a state of the art benchmark for evaluation of articulated human pose estimation. The dataset includes around 25K images containing over 40K people with annotated body joints. The images were systematically collected using an established taxonomy of every day human activities. Overall the dataset covers 410 human activities and each image is provided with an activity label. Each image was extracted from a YouTube video and provided with preceding and following un-annotated frames. In addition, for the test set we obtained richer annotations including body part occlusions and 3D torso and head orientations.",
+  "url": "http://human-pose.mpi-inf.mpg.de/",
+  "resources": {
+    "mpii_human_pose_v1.tar.gz": {
+      "url": "http://datasets.d2.mpi-inf.mpg.de/andriluka14cvpr/mpii_human_pose_v1.tar.gz",
+      "md5sum": "b6bc9c6869d3f035a5570b2e68ec84c4"
+    },
+    "mpii_annot.h5": {
+      "url": "https://github.com/anewell/pose-hg-train/raw/4637618a1b162d80436bfd0b557833b5824cbb21/data/mpii/annot.h5",
+      "md5sum": "c0d0ba453709e37d632b4d4059e2799c"
+    }
+  },
+  "citations": [
+    "M. Andriluka, L. Pishchulin, P. Gehler, B. Schiele; 2D Human Pose Estimation: New Benchmark and State of the Art Analysis; CVPR; 2014"
+  ]
+}

@@ -86,6 +86,8 @@ function dlds.extract_archive(file, dest_dir)
     format = 'tar'
   elseif file:find('%.zip$') then
     format = 'zip'
+  elseif file:find('%.gz$') then
+    format = 'gz'
   end
 
   print('Extracting "' .. file .. '"...')
@@ -100,6 +102,11 @@ function dlds.extract_archive(file, dest_dir)
   elseif format == 'zip' then
     pl.utils.execute(string.format('unzip -q %s -d %s',
       pl.utils.quote_arg(file), pl.utils.quote_arg(dest_dir)
+    ))
+  elseif format == 'gz' then
+    local out_file = pl.path.join(dest_dir, pl.path.basename(file):match('(.*)%.gz$'))
+    pl.utils.execute(string.format('gunzip -c %s > %s',
+      pl.utils.quote_arg(file), pl.utils.quote_arg(out_file)
     ))
   else
     error('unrecognised archive format')
