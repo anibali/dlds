@@ -30,14 +30,8 @@ local function crop(dst, src, x, y)
     yoff = -y
     y = 1
   end
-  if w > src:size(3) - x then
-    w = src:size(3) - x
-  end
-  if h > src:size(2) - y then
-    h = src:size(2) - y
-  end
-  w = w - xoff
-  h = h - yoff
+  w = math.min(w, src:size(3) - x, dst:size(3) - xoff)
+  h = math.min(h, src:size(2) - y, dst:size(2) - yoff)
   if w > 0 and h > 0 then
     dst
       :narrow(3, 1 + xoff, w)
