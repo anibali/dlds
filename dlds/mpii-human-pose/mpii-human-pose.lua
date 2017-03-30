@@ -47,175 +47,178 @@ local function batchify(t)
   return t:view(unpack(size))
 end
 
+local cropped = torch.ByteTensor(3, 256, 256)
+local function prepare_sample(s)
+  local scale = s.scale
+  local center = s.center:clone()
+
+  -- Small adjustments to reduce the likelihood of cropping out joints
+  center[2] = center[2] + 15 * scale
+  scale = scale * 1.25
+
+  local sz = 200 * scale
+  local img = image.load(s.image_path, 3, 'byte')
+  local scaled = image.scale(img, img:size(3) * 256 / sz, img:size(2) * 256 / sz)
+
+  cropped:zero()
+  crop(cropped, scaled, center[1] * 256 / sz - 127, center[2] * 256 / sz - 127)
+
+  local ax0 = -(2 / sz) * center[1]
+  local ax1 = 2 / sz
+  local ay0 = -(2 / sz) * center[2]
+  local ay1 = 2 / sz
+
+  local m = torch.FloatTensor({
+    {1/ax1, 0},
+    {0, 1/ay1},
+  })
+  local b = torch.FloatTensor({-ax0/ax1, -ay0/ay1})
+
+  local ps = {
+    image = cropped,
+    -- m and b describe the linear transform that must be applied to go from
+    -- [-1, 1] normalized coordinates in the sample image to original
+    -- coordinate space.
+    -- orig_coords = torch.mv(m, norm_coords) + b
+    m = m,
+    b = b,
+    subset = s.subset,
+  }
+
+  if s.subset ~= 'test' then
+    ps.part_visible = s.part_visible
+
+    local part_coords = torch.FloatTensor(16, 2):zero()
+    for i = 1, 16 do
+      if s.part_visible[i] == 1 then
+        part_coords[{i, 1}] = ax1 * s.part_coords[{i, 1}] + ax0
+        part_coords[{i, 2}] = ay1 * s.part_coords[{i, 2}] + ay0
+
+        -- local x = (part_coords[{i, 1}] + 1) * 256 / 2
+        -- local y = (part_coords[{i, 2}] + 1) * 256 / 2
+        -- image.drawRect(cropped, x - 1, y - 1, x + 1, y + 1, {inplace = true})
+      end
+    end
+    ps.part_coords = part_coords
+  end
+
+  return ps
+end
+
+local function process_subset(out_h5, subset, ids, annotations)
+  local ds_opts = {
+    ['images'] = hdf5.DataSetOptions():setChunked(16, 3, 256, 256),
+    ['transforms/m'] = hdf5.DataSetOptions():setChunked(2048, 2, 2),
+    ['transforms/b'] = hdf5.DataSetOptions():setChunked(2048, 2),
+    ['parts/coords'] = hdf5.DataSetOptions():setChunked(2048, 16, 2),
+    ['parts/visible'] = hdf5.DataSetOptions():setChunked(2048, 16),
+    ['parts/visible'] = hdf5.DataSetOptions():setChunked(2048, 16),
+    ['imgnames'] = hdf5.DataSetOptions():setChunked(2048, 16),
+  }
+
+  for i, id in ipairs(ids) do
+    local sample = {
+      subset = subset,
+      image_path = annotations.image_paths[id],
+      imgname = annotations.imgnames[id],
+      center = annotations.centers[id],
+      scale = annotations.scales[id],
+      part_coords = annotations.parts[id],
+      part_visible = annotations.visible[id],
+    }
+
+    local prepared_sample = prepare_sample(sample)
+
+    local h5_outputs = {
+      ['images'] = prepared_sample.image,
+      ['transforms/m'] = prepared_sample.m,
+      ['transforms/b'] = prepared_sample.b,
+      ['imgnames'] = sample.imgname,
+    }
+
+    if subset ~= 'test' then
+      h5_outputs['parts/coords'] = prepared_sample.part_coords
+      h5_outputs['parts/visible'] = prepared_sample.part_visible
+    end
+
+    for h5_path, tensor in pairs(h5_outputs) do
+      out_h5[i == 1 and 'write' or 'append'](
+        out_h5, '/' .. subset .. '/' .. h5_path, batchify(tensor), ds_opts[h5_path]
+      )
+    end
+
+    xlua.progress(i, #ids)
+  end
+
+  print('\n')
+end
+
 dlds.register_dataset('mpii-human-pose', function(details)
   local tmpdir = details.tmpdir
 
-  -- local images_dir = pl.path.join('/data/dlds/cache/mpii-human-pose', 'images')
-  local images_archive = details:download_file('mpii_human_pose_v1.tar.gz')
-  dlds.extract_archive(tarball_file, tmpdir)
-  local images_dir = pl.path.join(tmpdir, 'images')
+  local images_dir = pl.path.join('/data/dlds/cache/mpii-human-pose', 'images')
+  -- local images_archive = details:download_file('mpii_human_pose_v1.tar.gz')
+  -- dlds.extract_archive(tarball_file, tmpdir)
+  -- local images_dir = pl.path.join(tmpdir, 'images')
 
-  local annot_file = details:download_file('mpii_annot.h5')
+  local all_annot_file = details:download_file('mpii_annot_all.h5')
+  local val_annot_file = details:download_file('mpii_annot_valid.h5')
 
-  local annot_h5 = hdf5.open(annot_file, 'r')
-
-  local image_names = annot_h5:read('/imgname'):all()
+  local annot_h5 = hdf5.open(all_annot_file, 'r')
+  local image_indices = annot_h5:read('/index'):all()
   local is_train = annot_h5:read('/istrain'):all()
-  local centers = annot_h5:read('/center'):all()
-  local scales = annot_h5:read('/scale'):all()
-  local parts = annot_h5:read('/part'):all()
-  local visible = annot_h5:read('/visible'):all():byte()
+  local imgnames = annot_h5:read('/imgname'):all()
+  local image_paths = {}
+  for i = 1, imgnames:size(1) do
+    local image_name = bytes_to_string(imgnames[i]:totable())
+    image_paths[i] = pl.path.join(images_dir, image_name)
+  end
+  local annotations = {
+    centers = annot_h5:read('/center'):all(),
+    scales = annot_h5:read('/scale'):all(),
+    parts = annot_h5:read('/part'):all(),
+    visible = annot_h5:read('/visible'):all():byte(),
+    imgnames = imgnames,
+    image_paths = image_paths,
+  }
+  annot_h5:close()
 
-  local n_samples = image_names:size(1)
+  local val_annot_h5 = hdf5.open(val_annot_file, 'r')
+  local val_image_indices = val_annot_h5:read('/index'):all()
+  val_annot_h5:close()
 
-  local samples = {}
+  local train_ids = {}
+  local val_ids = {}
+  local test_ids = {}
 
-  for i = 1, n_samples do
-    local image_name = bytes_to_string(image_names[i]:totable())
-    samples[image_name] = samples[image_name] or {}
-
-    local sample = {
-      image_name = image_name,
-      center = centers[i],
-      scale = scales[i],
-    }
-
-    if is_train[i] == 1 then
-      sample.part_coords = parts[i]
-      sample.part_visible = visible[i]
-      sample.subset = 'train'
+  local val_pos = 1
+  for i = 1, image_indices:size(1) do
+    if val_pos <= val_image_indices:size(1) and image_indices[i] == val_image_indices[val_pos] then
+      table.insert(val_ids, i)
+      val_pos = val_pos + 1
+    elseif is_train[i] == 0 then
+      table.insert(test_ids, i)
     else
-      sample.subset = 'test'
-    end
-
-    table.insert(samples[image_name], sample)
-  end
-
-  local train_samples = {}
-  local test_samples = {}
-
-  for k, vs in pairs(samples) do
-    for i, sample in ipairs(vs) do
-      if sample.subset == 'train' then
-        table.insert(train_samples, sample)
-      else
-        table.insert(test_samples, sample)
-      end
+      table.insert(train_ids, i)
     end
   end
 
-  print(#train_samples)
-  print(#test_samples)
-
-  local cropped = torch.ByteTensor(3, 256, 256)
-  local function prepare_sample(s)
-    local sz = 200 * s.scale
-    local img = image.load(pl.path.join(images_dir, s.image_name), 3, 'byte')
-    local scaled = image.scale(img, img:size(3) * 256 / sz, img:size(2) * 256 / sz)
-
-    cropped:zero()
-    crop(cropped, scaled, s.center[1] * 256 / sz - 127, s.center[2] * 256 / sz - 127)
-
-    local ax0 = -(2 / sz) * s.center[1]
-    local ax1 = 2 / sz
-    local ay0 = -(2 / sz) * s.center[2]
-    local ay1 = 2 / sz
-
-    local m = torch.FloatTensor({
-      {1/ax1, 0},
-      {0, 1/ay1},
-    })
-    local b = torch.FloatTensor({-ax0/ax1, -ay0/ay1})
-
-    local ps = {
-      image = cropped,
-      -- m and b describe the linear transform that must be applied to go from
-      -- [-1, 1] normalized coordinates in the sample image to original
-      -- coordinate space.
-      -- orig_coords = torch.mv(m, norm_coords) + b
-      m = m,
-      b = b,
-      subset = s.subset,
-    }
-
-    if s.subset == 'train' then
-      ps.part_visible = s.part_visible
-
-      local part_coords = torch.FloatTensor(16, 2):zero()
-      for i = 1, 16 do
-        if s.part_visible[i] == 1 then
-          part_coords[{i, 1}] = ax1 * s.part_coords[{i, 1}] + ax0
-          part_coords[{i, 2}] = ay1 * s.part_coords[{i, 2}] + ay0
-
-          -- local x = (part_coords[{i, 1}] + 1) * 256 / 2
-          -- local y = (part_coords[{i, 2}] + 1) * 256 / 2
-          -- image.drawRect(cropped, x - 1, y - 1, x + 1, y + 1, {inplace = true})
-        end
-      end
-      ps.part_coords = part_coords
-    end
-
-    return ps
-  end
+  print(#train_ids, #val_ids, #test_ids)
 
   local out_dir = details:make_dataset_directory()
   local out_h5 = hdf5.open(pl.path.join(out_dir, 'mpii-human-pose.h5'), 'w')
 
-  print('Processing test set...')
-  local ds_opts = {
-    ['/test/images'] = hdf5.DataSetOptions():setChunked(16, 3, 256, 256),
-    ['/test/transforms/m'] = hdf5.DataSetOptions():setChunked(2048, 2, 2),
-    ['/test/transforms/b'] = hdf5.DataSetOptions():setChunked(2048, 2),
-  }
-  for i, sample_details in ipairs(test_samples) do
-    local sample = prepare_sample(sample_details)
-
-    local h5_outputs = {
-      ['/test/images'] = sample.image,
-      ['/test/transforms/m'] = sample.m,
-      ['/test/transforms/b'] = sample.b,
-    }
-
-    for h5_path, tensor in pairs(h5_outputs) do
-      out_h5[i == 1 and 'write' or 'append'](
-        out_h5, h5_path, batchify(tensor), ds_opts[h5_path]
-      )
-    end
-
-    xlua.progress(i, #test_samples)
-  end
-  print('\n')
-
+  print('Processing train set...')
+  process_subset(out_h5, 'train', train_ids, annotations)
   collectgarbage()
 
-  print('Processing train set...')
-  local ds_opts = {
-    ['/train/images'] = hdf5.DataSetOptions():setChunked(16, 3, 256, 256),
-    ['/train/transforms/m'] = hdf5.DataSetOptions():setChunked(2048, 2, 2),
-    ['/train/transforms/b'] = hdf5.DataSetOptions():setChunked(2048, 2),
-    ['/train/parts/coords'] = hdf5.DataSetOptions():setChunked(2048, 16, 2),
-    ['/train/parts/visible'] = hdf5.DataSetOptions():setChunked(2048, 16),
-  }
-  for i, sample_details in ipairs(train_samples) do
-    local sample = prepare_sample(sample_details)
+  print('Processing validation set...')
+  process_subset(out_h5, 'val', val_ids, annotations)
+  collectgarbage()
 
-    local h5_outputs = {
-      ['/train/images'] = sample.image,
-      ['/train/transforms/m'] = sample.m,
-      ['/train/transforms/b'] = sample.b,
-      ['/train/parts/coords'] = sample.part_coords,
-      ['/train/parts/visible'] = sample.part_visible,
-    }
-
-    for h5_path, tensor in pairs(h5_outputs) do
-      out_h5[i == 1 and 'write' or 'append'](
-        out_h5, h5_path, batchify(tensor), ds_opts[h5_path]
-      )
-    end
-
-    xlua.progress(i, #train_samples)
-  end
-  print('\n')
+  print('Processing test set...')
+  process_subset(out_h5, 'test', test_ids, annotations)
+  collectgarbage()
 
   out_h5:close()
 end)

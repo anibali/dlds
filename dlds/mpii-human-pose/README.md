@@ -22,7 +22,7 @@ mpii-human-pose
 └── mpii-human-pose.h5
 ```
 
-`mpii-human-pose.h5` contains the images for the training and test
+`mpii-human-pose.h5` contains the images for the training, validation, and test
 sets. Its internal structure is as follows:
 
 | Name                          | Type      | Dimensions            |
@@ -30,16 +30,23 @@ sets. Its internal structure is as follows:
 | `/test/images`                | Byte      | 11731 x 3 x 256 x 256 |
 | `/test/transforms/m`          | Float     | 11731 x 2 x 2         |
 | `/test/transforms/b`          | Float     | 11731 x 2             |
-| `/train/images`               | Byte      | 28883 x 3 x 256 x 256 |
-| `/train/transforms/m`         | Float     | 28883 x 2 x 2         |
-| `/train/transforms/b`         | Float     | 28883 x 2             |
-| `/train/parts/coords`         | Float     | 28883 x 16 x 2        |
-| `/train/parts/visible`        | Byte      | 28883 x 16            |
+| `/train/images`               | Byte      | 25925 x 3 x 256 x 256 |
+| `/train/transforms/m`         | Float     | 25925 x 2 x 2         |
+| `/train/transforms/b`         | Float     | 25925 x 2             |
+| `/train/parts/coords`         | Float     | 25925 x 16 x 2        |
+| `/train/parts/visible`        | Byte      | 25925 x 16            |
+| `/val/images`                 | Byte      | 2958 x 3 x 256 x 256  |
+| `/val/transforms/m`           | Float     | 2958 x 2 x 2          |
+| `/val/transforms/b`           | Float     | 2958 x 2              |
+| `/val/parts/coords`           | Float     | 2958 x 16 x 2         |
+| `/val/parts/visible`          | Byte      | 2958 x 16             |
 
 The values stored in `transforms` can be used to convert coordinates in
 normalized image space (where (-1, -1) is top-left and (1, 1) is bottom-right)
 to coordinates in the original coordinate system of the MPII Human Pose dataset.
 This is useful if you intend submitting results for evaluation on the test set.
+
+The validation set is the same as Newell et al and Tompson et al.
 
 ```
 origcoords = m * normcoords + b

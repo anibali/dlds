@@ -7,9 +7,13 @@
       "url": "http://datasets.d2.mpi-inf.mpg.de/andriluka14cvpr/mpii_human_pose_v1.tar.gz",
       "md5sum": "b6bc9c6869d3f035a5570b2e68ec84c4"
     },
-    "mpii_annot.h5": {
+    "mpii_annot_all.h5": {
       "url": "https://github.com/anewell/pose-hg-train/raw/4637618a1b162d80436bfd0b557833b5824cbb21/data/mpii/annot.h5",
       "md5sum": "c0d0ba453709e37d632b4d4059e2799c"
+    },
+    "mpii_annot_valid.h5": {
+      "url": "https://github.com/anewell/pose-hg-train/raw/4637618a1b162d80436bfd0b557833b5824cbb21/data/mpii/annot/valid.h5",
+      "md5sum": "d88b6828485168c1fb4c79a21995fdef"
     }
   },
   "citations": [
