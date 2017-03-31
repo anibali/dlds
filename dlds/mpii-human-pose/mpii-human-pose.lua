@@ -47,7 +47,65 @@ local function batchify(t)
   return t:view(unpack(size))
 end
 
-local cropped = torch.ByteTensor(3, 256, 256)
+-- local cropped = torch.ByteTensor(3, 256, 256)
+-- local function prepare_sample(s)
+--   local scale = s.scale
+--   local center = s.center:clone()
+
+--   -- Small adjustments to reduce the likelihood of cropping out joints
+--   center[2] = center[2] + 15 * scale
+--   scale = scale * 1.25
+
+--   local sz = 200 * scale
+--   local img = image.load(s.image_path, 3, 'byte')
+--   local scaled = image.scale(img, img:size(3) * 256 / sz, img:size(2) * 256 / sz)
+
+--   cropped:zero()
+--   crop(cropped, scaled, center[1] * 256 / sz - 127, center[2] * 256 / sz - 127)
+
+--   local ax0 = -(2 / sz) * center[1]
+--   local ax1 = 2 / sz
+--   local ay0 = -(2 / sz) * center[2]
+--   local ay1 = 2 / sz
+
+--   local m = torch.FloatTensor({
+--     {1/ax1, 0},
+--     {0, 1/ay1},
+--   })
+--   local b = torch.FloatTensor({-ax0/ax1, -ay0/ay1})
+
+--   local ps = {
+--     image = cropped,
+--     -- m and b describe the linear transform that must be applied to go from
+--     -- [-1, 1] normalized coordinates in the sample image to original
+--     -- coordinate space.
+--     -- orig_coords = torch.mv(m, norm_coords) + b
+--     m = m,
+--     b = b,
+--     subset = s.subset,
+--   }
+
+--   if s.subset ~= 'test' then
+--     ps.part_visible = s.part_visible
+
+--     local part_coords = torch.FloatTensor(16, 2):zero()
+--     for i = 1, 16 do
+--       if s.part_visible[i] == 1 then
+--         part_coords[{i, 1}] = ax1 * s.part_coords[{i, 1}] + ax0
+--         part_coords[{i, 2}] = ay1 * s.part_coords[{i, 2}] + ay0
+
+--         -- local x = (part_coords[{i, 1}] + 1) * 256 / 2
+--         -- local y = (part_coords[{i, 2}] + 1) * 256 / 2
+--         -- image.drawRect(cropped, x - 1, y - 1, x + 1, y + 1, {inplace = true})
+--       end
+--     end
+--     ps.part_coords = part_coords
+--   end
+
+--   return ps
+-- end
+
+local cropped = torch.ByteTensor(3, 550, 550)
 local function prepare_sample(s)
   local scale = s.scale
   local center = s.center:clone()
@@ -56,50 +114,57 @@ local function prepare_sample(s)
   center[2] = center[2] + 15 * scale
   scale = scale * 1.25
 
+  -- We will consider this to be the bounding box size for the person
   local sz = 200 * scale
-  local img = image.load(s.image_path, 3, 'byte')
-  local scaled = image.scale(img, img:size(3) * 256 / sz, img:size(2) * 256 / sz)
+  -- The scale factor which sets the size of the "bounding box" in the output
+  -- image
+  local sf = 384 / sz
 
+  -- Load the original image
+  local input_image = image.load(s.image_path, 3, 'byte')
+
+  -- Scale and crop the image to get a fixed size output image
+  -- The output image is centered on the subject and scaled such that the
+  -- subject has a rough "bounding box" that is 384x384 pixels in size
+  local scaled = image.scale(
+    input_image, input_image:size(3) * sf, input_image:size(2) * sf)
+  local outh = cropped:size(2)
+  local outw = cropped:size(3)
   cropped:zero()
-  crop(cropped, scaled, center[1] * 256 / sz - 127, center[2] * 256 / sz - 127)
-
-  local ax0 = -(2 / sz) * center[1]
-  local ax1 = 2 / sz
-  local ay0 = -(2 / sz) * center[2]
-  local ay1 = 2 / sz
-
-  local m = torch.FloatTensor({
-    {1/ax1, 0},
-    {0, 1/ay1},
-  })
-  local b = torch.FloatTensor({-ax0/ax1, -ay0/ay1})
+  crop(cropped, scaled,
+    center[1] * sf - math.floor(outw/2), center[2] * sf - math.floor(outh/2))
 
   local ps = {
     image = cropped,
-    -- m and b describe the linear transform that must be applied to go from
-    -- [-1, 1] normalized coordinates in the sample image to original
-    -- coordinate space.
-    -- orig_coords = torch.mv(m, norm_coords) + b
-    m = m,
-    b = b,
     subset = s.subset,
   }
 
   if s.subset ~= 'test' then
-    ps.part_visible = s.part_visible
+    -- Transform coordinates into output image coordinate space
+    local transform_matrix = torch.FloatTensor({
+      { sf , 0  },
+      { 0  , sf },
+    })
+    local offset_matrix = torch.FloatTensor({
+      { -center[1] * sf + outw / 2, -center[2] * sf + outh / 2 },
+    })
+    local part_coords = torch.mm(s.part_coords:float(), transform_matrix)
+    part_coords:add(offset_matrix:expandAs(part_coords))
 
-    local part_coords = torch.FloatTensor(16, 2):zero()
-    for i = 1, 16 do
-      if s.part_visible[i] == 1 then
-        part_coords[{i, 1}] = ax1 * s.part_coords[{i, 1}] + ax0
-        part_coords[{i, 2}] = ay1 * s.part_coords[{i, 2}] + ay0
+    -- Set coordinates to -1 for joints which are not visible
+    local part_visible = s.part_visible
+    part_coords:maskedFill(part_visible:eq(0):view(-1, 1):expandAs(part_coords), -1)
 
-        -- local x = (part_coords[{i, 1}] + 1) * 256 / 2
-        -- local y = (part_coords[{i, 2}] + 1) * 256 / 2
-        -- image.drawRect(cropped, x - 1, y - 1, x + 1, y + 1, {inplace = true})
-      end
-    end
+    ps.part_visible = part_visible
     ps.part_coords = part_coords
+
+    -- for i = 1, 16 do
+    --   if part_visible[i] == 1 then
+    --     local x = part_coords[{i, 1}]
+    --     local y = part_coords[{i, 2}]
+    --     image.drawRect(cropped, x - 1, y - 1, x + 1, y + 1, {inplace = true, color = {255, 0, 0}})
+    --   end
+    -- end
   end
 
   return ps
@@ -107,9 +172,9 @@ end
 
 local function process_subset(out_h5, subset, ids, annotations)
   local ds_opts = {
-    ['images'] = hdf5.DataSetOptions():setChunked(16, 3, 256, 256),
-    ['transforms/m'] = hdf5.DataSetOptions():setChunked(2048, 2, 2),
-    ['transforms/b'] = hdf5.DataSetOptions():setChunked(2048, 2),
+    ['images'] = hdf5.DataSetOptions():setChunked(4, 3, 256, 256),
+    -- ['transforms/m'] = hdf5.DataSetOptions():setChunked(2048, 2, 2),
+    -- ['transforms/b'] = hdf5.DataSetOptions():setChunked(2048, 2),
     ['parts/coords'] = hdf5.DataSetOptions():setChunked(2048, 16, 2),
     ['parts/visible'] = hdf5.DataSetOptions():setChunked(2048, 16),
     ['parts/visible'] = hdf5.DataSetOptions():setChunked(2048, 16),
@@ -131,8 +196,8 @@ local function process_subset(out_h5, subset, ids, annotations)
 
     local h5_outputs = {
       ['images'] = prepared_sample.image,
-      ['transforms/m'] = prepared_sample.m,
-      ['transforms/b'] = prepared_sample.b,
+      -- ['transforms/m'] = prepared_sample.m,
+      -- ['transforms/b'] = prepared_sample.b,
       ['imgnames'] = sample.imgname,
     }
 
@@ -156,10 +221,10 @@ end
 dlds.register_dataset('mpii-human-pose', function(details)
   local tmpdir = details.tmpdir
 
-  local images_dir = pl.path.join('/data/dlds/cache/mpii-human-pose', 'images')
-  -- local images_archive = details:download_file('mpii_human_pose_v1.tar.gz')
-  -- dlds.extract_archive(tarball_file, tmpdir)
-  -- local images_dir = pl.path.join(tmpdir, 'images')
+  -- local images_dir = pl.path.join('/data/dlds/cache/mpii-human-pose', 'images')
+  local images_archive = details:download_file('mpii_human_pose_v1.tar.gz')
+  dlds.extract_archive(tarball_file, tmpdir)
+  local images_dir = pl.path.join(tmpdir, 'images')
 
   local all_annot_file = details:download_file('mpii_annot_all.h5')
   local val_annot_file = details:download_file('mpii_annot_valid.h5')

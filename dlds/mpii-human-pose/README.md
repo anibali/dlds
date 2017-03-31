@@ -27,30 +27,18 @@ sets. Its internal structure is as follows:
 
 | Name                          | Type      | Dimensions            |
 | ----------------------------- | --------- | --------------------- |
-| `/test/images`                | Byte      | 11731 x 3 x 256 x 256 |
-| `/test/transforms/m`          | Float     | 11731 x 2 x 2         |
-| `/test/transforms/b`          | Float     | 11731 x 2             |
-| `/train/images`               | Byte      | 25925 x 3 x 256 x 256 |
-| `/train/transforms/m`         | Float     | 25925 x 2 x 2         |
-| `/train/transforms/b`         | Float     | 25925 x 2             |
+| `/test/images`                | Byte      | 11731 x 3 x 550 x 550 |
+| `/train/images`               | Byte      | 25925 x 3 x 550 x 550 |
 | `/train/parts/coords`         | Float     | 25925 x 16 x 2        |
 | `/train/parts/visible`        | Byte      | 25925 x 16            |
-| `/val/images`                 | Byte      | 2958 x 3 x 256 x 256  |
-| `/val/transforms/m`           | Float     | 2958 x 2 x 2          |
-| `/val/transforms/b`           | Float     | 2958 x 2              |
+| `/val/images`                 | Byte      | 2958 x 3 x 550 x 550  |
 | `/val/parts/coords`           | Float     | 2958 x 16 x 2         |
 | `/val/parts/visible`          | Byte      | 2958 x 16             |
 
-The values stored in `transforms` can be used to convert coordinates in
-normalized image space (where (-1, -1) is top-left and (1, 1) is bottom-right)
-to coordinates in the original coordinate system of the MPII Human Pose dataset.
-This is useful if you intend submitting results for evaluation on the test set.
+The center 384x384 pixels of each image contain the human subject. The
+surrounding pixels are there for if you want to perform augmentations.
 
 The validation set is the same as Newell et al and Tompson et al.
-
-```
-origcoords = m * normcoords + b
-```
 
 ## Citation
 
