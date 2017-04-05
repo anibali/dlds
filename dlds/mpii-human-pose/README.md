@@ -28,17 +28,40 @@ sets. Its internal structure is as follows:
 | Name                          | Type      | Dimensions            |
 | ----------------------------- | --------- | --------------------- |
 | `/test/images`                | Byte      | 11731 x 3 x 550 x 550 |
+| `/test/transforms/m`          | Float     | 11731 x 2 x 2         |
+| `/test/transforms/b`          | Float     | 11731 x 1 x 2         |
+| `/test/normalize`             | Float     | 11731                 |
 | `/train/images`               | Byte      | 25925 x 3 x 550 x 550 |
 | `/train/parts/coords`         | Float     | 25925 x 16 x 2        |
 | `/train/parts/visible`        | Byte      | 25925 x 16            |
+| `/train/transforms/m`         | Float     | 25925 x 2 x 2         |
+| `/train/transforms/b`         | Float     | 25925 x 1 x 2         |
+| `/train/normalize`            | Float     | 25925                 |
 | `/val/images`                 | Byte      | 2958 x 3 x 550 x 550  |
 | `/val/parts/coords`           | Float     | 2958 x 16 x 2         |
 | `/val/parts/visible`          | Byte      | 2958 x 16             |
+| `/val/transforms/m`           | Float     | 2958 x 2 x 2          |
+| `/val/transforms/b`           | Float     | 2958 x 1 x 2          |
+| `/val/normalize`              | Float     | 2958                  |
 
 The center 384x384 pixels of each image contain the human subject. The
 surrounding pixels are there for if you want to perform augmentations.
 
 The validation set is the same as Newell et al and Tompson et al.
+
+The `transforms` datasets contain matrices for transforming coordinates from
+processed image space to the original MPII image space. This
+is useful for evaluation. The formula for restoring coordinates is a simple
+linear transform: `orig_coords = proc_coords * M + B`. In Torch this would
+be coded as follows (where `proc_coords` is an n x 2 matrix of coordinates
+to be transformed):
+
+```lua
+local orig_coords = torch.mm(proc_coords, M):add(B:expandAs(proc_coords))
+```
+
+The `normalize` datasets contain head segment lengths for each example. These
+can be used to calculate PCKh scores.
 
 ## Citation
 

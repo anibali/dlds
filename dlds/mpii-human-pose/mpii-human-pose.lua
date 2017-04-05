@@ -42,68 +42,13 @@ local function crop(dst, src, x, y)
 end
 
 local function batchify(t)
+  if torch.type(t) == 'number' then
+    return torch.FloatTensor{t}
+  end
   local size = t:size():totable()
   table.insert(size, 1, 1)
   return t:view(unpack(size))
 end
-
--- local cropped = torch.ByteTensor(3, 256, 256)
--- local function prepare_sample(s)
---   local scale = s.scale
---   local center = s.center:clone()
-
---   -- Small adjustments to reduce the likelihood of cropping out joints
---   center[2] = center[2] + 15 * scale
---   scale = scale * 1.25
-
---   local sz = 200 * scale
---   local img = image.load(s.image_path, 3, 'byte')
---   local scaled = image.scale(img, img:size(3) * 256 / sz, img:size(2) * 256 / sz)
-
---   cropped:zero()
---   crop(cropped, scaled, center[1] * 256 / sz - 127, center[2] * 256 / sz - 127)
-
---   local ax0 = -(2 / sz) * center[1]
---   local ax1 = 2 / sz
---   local ay0 = -(2 / sz) * center[2]
---   local ay1 = 2 / sz
-
---   local m = torch.FloatTensor({
---     {1/ax1, 0},
---     {0, 1/ay1},
---   })
---   local b = torch.FloatTensor({-ax0/ax1, -ay0/ay1})
-
---   local ps = {
---     image = cropped,
---     -- m and b describe the linear transform that must be applied to go from
---     -- [-1, 1] normalized coordinates in the sample image to original
---     -- coordinate space.
---     -- orig_coords = torch.mv(m, norm_coords) + b
---     m = m,
---     b = b,
---     subset = s.subset,
---   }
-
---   if s.subset ~= 'test' then
---     ps.part_visible = s.part_visible
-
---     local part_coords = torch.FloatTensor(16, 2):zero()
---     for i = 1, 16 do
---       if s.part_visible[i] == 1 then
---         part_coords[{i, 1}] = ax1 * s.part_coords[{i, 1}] + ax0
---         part_coords[{i, 2}] = ay1 * s.part_coords[{i, 2}] + ay0
-
---         -- local x = (part_coords[{i, 1}] + 1) * 256 / 2
---         -- local y = (part_coords[{i, 2}] + 1) * 256 / 2
---         -- image.drawRect(cropped, x - 1, y - 1, x + 1, y + 1, {inplace = true})
---       end
---     end
---     ps.part_coords = part_coords
---   end
-
---   return ps
--- end
 
 local cropped = torch.ByteTensor(3, 550, 550)
 local function prepare_sample(s)
@@ -139,25 +84,26 @@ local function prepare_sample(s)
     subset = s.subset,
   }
 
+  -- Calculate matrices for transforming coordinates into processed coordinate
+  -- space
+  local transform_matrix = torch.FloatTensor({
+    { sf , 0  },
+    { 0  , sf },
+  })
+  local offset_matrix = torch.FloatTensor({
+    { -center[1] * sf + outw / 2, -center[2] * sf + outh / 2 },
+  })
+
   if s.subset ~= 'test' then
-    -- Transform coordinates into output image coordinate space
-    local transform_matrix = torch.FloatTensor({
-      { sf , 0  },
-      { 0  , sf },
-    })
-    local offset_matrix = torch.FloatTensor({
-      { -center[1] * sf + outw / 2, -center[2] * sf + outh / 2 },
-    })
     local part_coords = torch.mm(s.part_coords:float(), transform_matrix)
     part_coords:add(offset_matrix:expandAs(part_coords))
 
-    -- Set coordinates to -1 for joints which are not visible
     local part_visible = s.part_visible
-    part_coords:maskedFill(part_visible:eq(0):view(-1, 1):expandAs(part_coords), -1)
 
     ps.part_visible = part_visible
     ps.part_coords = part_coords
 
+    -- -- Draw joints over the image. Only useful for debugging
     -- for i = 1, 16 do
     --   if part_visible[i] == 1 then
     --     local x = part_coords[{i, 1}]
@@ -167,18 +113,24 @@ local function prepare_sample(s)
     -- end
   end
 
+  -- Calculate matrices for transforming coords back into original image space
+  local inv_matrix = torch.inverse(transform_matrix:double())
+  ps.transform_m = inv_matrix:float()
+  ps.transform_b = -torch.mm(offset_matrix:double(), inv_matrix):float()
+
   return ps
 end
 
 local function process_subset(out_h5, subset, ids, annotations)
   local ds_opts = {
     ['images'] = hdf5.DataSetOptions():setChunked(4, 3, 256, 256),
-    -- ['transforms/m'] = hdf5.DataSetOptions():setChunked(2048, 2, 2),
-    -- ['transforms/b'] = hdf5.DataSetOptions():setChunked(2048, 2),
+    ['transforms/m'] = hdf5.DataSetOptions():setChunked(2048, 2, 2),
+    ['transforms/b'] = hdf5.DataSetOptions():setChunked(2048, 1, 2),
     ['parts/coords'] = hdf5.DataSetOptions():setChunked(2048, 16, 2),
     ['parts/visible'] = hdf5.DataSetOptions():setChunked(2048, 16),
     ['parts/visible'] = hdf5.DataSetOptions():setChunked(2048, 16),
     ['imgnames'] = hdf5.DataSetOptions():setChunked(2048, 16),
+    ['normalize'] = hdf5.DataSetOptions():setChunked(2048),
   }
 
   for i, id in ipairs(ids) do
@@ -196,9 +148,10 @@ local function process_subset(out_h5, subset, ids, annotations)
 
     local h5_outputs = {
       ['images'] = prepared_sample.image,
-      -- ['transforms/m'] = prepared_sample.m,
-      -- ['transforms/b'] = prepared_sample.b,
+      ['transforms/m'] = prepared_sample.transform_m,
+      ['transforms/b'] = prepared_sample.transform_b,
       ['imgnames'] = sample.imgname,
+      ['normalize'] = annotations.normalize[id],
     }
 
     if subset ~= 'test' then
@@ -230,9 +183,10 @@ dlds.register_dataset('mpii-human-pose', function(details)
   local val_annot_file = details:download_file('mpii_annot_valid.h5')
 
   local annot_h5 = hdf5.open(all_annot_file, 'r')
-  local image_indices = annot_h5:read('/index'):all()
+  local image_indices = annot_h5:read('/index'):all():long()
   local is_train = annot_h5:read('/istrain'):all()
   local imgnames = annot_h5:read('/imgname'):all()
+  local people = annot_h5:read('/person'):all():long()
   local image_paths = {}
   for i = 1, imgnames:size(1) do
     local image_name = bytes_to_string(imgnames[i]:totable())
@@ -243,22 +197,29 @@ dlds.register_dataset('mpii-human-pose', function(details)
     scales = annot_h5:read('/scale'):all(),
     parts = annot_h5:read('/part'):all(),
     visible = annot_h5:read('/visible'):all():byte(),
+    normalize = annot_h5:read('/normalize'):all(),
     imgnames = imgnames,
     image_paths = image_paths,
   }
   annot_h5:close()
 
   local val_annot_h5 = hdf5.open(val_annot_file, 'r')
-  local val_image_indices = val_annot_h5:read('/index'):all()
+  local val_image_indices = val_annot_h5:read('/index'):all():long()
+  local val_people = val_annot_h5:read('/person'):all():long()
   val_annot_h5:close()
 
   local train_ids = {}
   local val_ids = {}
   local test_ids = {}
 
+  -- An "identifier" is the image index concatenated with the index of the
+  -- person in the image
+  local all_identifiers = image_indices:cat(people, 2)
+  local val_identifiers = val_image_indices:cat(val_people, 2)
+
   local val_pos = 1
   for i = 1, image_indices:size(1) do
-    if val_pos <= val_image_indices:size(1) and image_indices[i] == val_image_indices[val_pos] then
+    if val_pos <= val_image_indices:size(1) and all_identifiers[i]:equal(val_identifiers[val_pos]) then
       table.insert(val_ids, i)
       val_pos = val_pos + 1
     elseif is_train[i] == 0 then
