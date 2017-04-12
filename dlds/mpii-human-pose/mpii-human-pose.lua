@@ -176,7 +176,7 @@ dlds.register_dataset('mpii-human-pose', function(details)
 
   -- local images_dir = pl.path.join('/data/dlds/cache/mpii-human-pose', 'images')
   local images_archive = details:download_file('mpii_human_pose_v1.tar.gz')
-  dlds.extract_archive(tarball_file, tmpdir)
+  dlds.extract_archive(images_archive, tmpdir)
   local images_dir = pl.path.join(tmpdir, 'images')
 
   local all_annot_file = details:download_file('mpii_annot_all.h5')
