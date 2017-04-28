@@ -1,0 +1,18 @@
+{
+  "name": "Stanford Cars",
+  "description": "The Cars dataset contains 16,185 images of 196 classes of cars. The data is split into 8,144 training images and 8,041 testing images, where each class has been split roughly in a 50-50 split. Classes are typically at the level of Make, Model, Year, e.g. 2012 Tesla Model S or 2012 BMW M3 coupe.",
+  "url": "https://ai.stanford.edu/~jkrause/cars/car_dataset.html",
+  "resources": {
+    "car_ims.tgz": {
+      "url": "http://imagenet.stanford.edu/internal/car196/car_ims.tgz",
+      "md5sum": "d5c8f0aa497503f355e17dc7886c3f14"
+    },
+    "cars_annos.mat": {
+      "url": "http://imagenet.stanford.edu/internal/car196/cars_annos.mat",
+      "md5sum": "b407c6086d669747186bd1d764ff9dbc"
+    }
+  },
+  "citations": [
+    "J. Krause, M. Stark, J. Deng, L. Fei-Fei; 3D Object Representations for Fine-Grained Categorization; ICCV; 2013"
+  ]
+}
