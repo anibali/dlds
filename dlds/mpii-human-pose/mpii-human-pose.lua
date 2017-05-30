@@ -173,6 +173,7 @@ end
 
 dlds.register_dataset('mpii-human-pose', function(details)
   local tmpdir = details.tmpdir
+  local out_dir = details:make_dataset_directory()
 
   -- local images_dir = pl.path.join('/data/dlds/cache/mpii-human-pose', 'images')
   local images_archive = details:download_file('mpii_human_pose_v1.tar.gz')
@@ -181,6 +182,12 @@ dlds.register_dataset('mpii-human-pose', function(details)
 
   local all_annot_file = details:download_file('mpii_annot_all.h5')
   local val_annot_file = details:download_file('mpii_annot_valid.h5')
+  local train_annot_file = details:download_file('mpii_annot_train.h5')
+  local test_annot_file = details:download_file('mpii_annot_test.h5')
+
+  pl.file.copy(val_annot_file, pl.path.join(out_dir, 'annot-val.h5'))
+  pl.file.copy(train_annot_file, pl.path.join(out_dir, 'annot-train.h5'))
+  pl.file.copy(test_annot_file, pl.path.join(out_dir, 'annot-test.h5'))
 
   local annot_h5 = hdf5.open(all_annot_file, 'r')
   local image_indices = annot_h5:read('/index'):all():long()
@@ -231,7 +238,6 @@ dlds.register_dataset('mpii-human-pose', function(details)
 
   print(#train_ids, #val_ids, #test_ids)
 
-  local out_dir = details:make_dataset_directory()
   local out_h5 = hdf5.open(pl.path.join(out_dir, 'mpii-human-pose.h5'), 'w')
 
   print('Processing train set...')

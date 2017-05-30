@@ -18,7 +18,9 @@ DLDS will install the following files for this dataset:
 
 ```
 mpii-human-pose
-├── classes.txt
+├── annot-test.h5
+├── annot-train.h5
+├── annot-val.h5
 └── mpii-human-pose.h5
 ```
 
@@ -62,6 +64,9 @@ local orig_coords = torch.mm(proc_coords, M):add(B:expandAs(proc_coords))
 
 The `normalize` datasets contain head segment lengths for each example. These
 can be used to calculate PCKh scores.
+
+The other `.h5` files are annotations downloaded verbatim from
+https://github.com/anewell/pose-hg-train/tree/4637618a1b162d80436bfd0b557833b5824cbb21/data/mpii/annot.
 
 ## Citation
 

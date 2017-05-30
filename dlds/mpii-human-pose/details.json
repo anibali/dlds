@@ -14,6 +14,14 @@
     "mpii_annot_valid.h5": {
       "url": "https://github.com/anewell/pose-hg-train/raw/4637618a1b162d80436bfd0b557833b5824cbb21/data/mpii/annot/valid.h5",
       "md5sum": "d88b6828485168c1fb4c79a21995fdef"
+    },
+    "mpii_annot_test.h5": {
+      "url": "https://github.com/anewell/pose-hg-train/raw/4637618a1b162d80436bfd0b557833b5824cbb21/data/mpii/annot/test.h5",
+      "md5sum": "e109d2184f4f08abc8e83656c5ae194b"
+    },
+    "mpii_annot_train.h5": {
+      "url": "https://github.com/anewell/pose-hg-train/raw/4637618a1b162d80436bfd0b557833b5824cbb21/data/mpii/annot/train.h5",
+      "md5sum": "aea832fe9850ad07d59d1f822b0ab69a"
     }
   },
   "citations": [
